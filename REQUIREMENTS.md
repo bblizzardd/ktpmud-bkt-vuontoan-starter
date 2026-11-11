@@ -1,233 +1,142 @@
-# REQUIREMENTS — Ước lượng trước khi tính đúng
+# Yêu cầu — Ước lượng trước khi tính đúng
 
-- Dự án: Vườn Toán Lớp 3 — Hack Marathon 2026, Track B.
+**Dự án:** Vườn Toán Lớp 3 — Track B.
 
+**Trạng thái:** Đặc tả mục tiêu, chưa triển khai.
 
+Thiết kế liên quan: [DECISIONS.md](DECISIONS.md). Kế hoạch kiểm chứng: [TEST_PLAN.md](TEST_PLAN.md).
 
-## 1. Nguồn yêu cầu và hệ thống hiện có
+## 1. Bối cảnh
 
+Starter dùng Express, SQLite và JavaScript thuần. Bốn type hiện có là `multiple-choice`, `input`, `compare`, `paint`; server chấm bằng so sánh chuỗi. Tính năng mới bổ sung type `estimate` vào luồng học hiện tại.
 
-Starter sử dụng Node.js, Express, SQLite và HTML/CSS/JavaScript. Các bảng liên
-quan là `questions`, `question_sets`, `attempts`, `progress`. Hiện có bốn loại
-câu hỏi: `multiple-choice`, `input`, `compare`, `paint`.
+## 2. Luồng học
 
-`POST /api/submissions` hiện chấm bằng so sánh chuỗi chính xác, lưu lượt nộp,
-cập nhật điểm tốt nhất và cộng sao theo phần tiến bộ. Hệ thống chưa có kiểu
-câu hỏi hai bước hoặc rubric sai số tương đối. `package.json` chưa có
-`npm test`; nhóm phải bổ sung trong giai đoạn triển khai.
+Chọn **hai bước cho từng câu (phương án A)**, theo thứ tự cố định của 12 câu trong fixture:
 
-## 2. Bài toán và mục tiêu
+1. Nhập ước lượng câu 1 → bấm **Xác nhận ước lượng** → server validate, lưu và khóa. Chỉ khi server xác nhận thành công mới mở ô tính chính xác của câu đó.
+2. Nhập kết quả tính chính xác → bấm **Câu tiếp theo**. Server validate định dạng và lưu câu trả lời; chỉ khi lưu thành công mới sang câu 2. Lặp lại đến câu 12.
+3. Ở câu 12, bấm **Lưu và xem lại** để lưu rồi mở màn hình xem lại. Học sinh được xem các giá trị mình đã nhập, quay lại sửa câu trả lời chính xác và bấm **Lưu thay đổi**; ước lượng đã khóa không được sửa.
+4. Khi đủ 12 ước lượng đã khóa và 12 câu trả lời chính xác đã lưu, bấm **Nộp bài**. Server chấm cả bộ một lần, lưu kết quả và trả phản hồi riêng cho hai phần.
 
-Học sinh cần luyện khả năng đưa ra một kết quả gần đúng trước khi tính chính
-xác, sau đó đối chiếu hai câu trả lời. Sản phẩm cần ghi nhận riêng chất lượng
-ước lượng và tính đúng của phép tính, để học sinh nhận biết mình làm tốt hoặc
-cần cải thiện ở bước nào.
+**Lưu câu trả lời không phải chấm bài:** “kết quả tính chính xác” là câu trả lời học sinh tự tính, có thể đúng hoặc sai. Khi lưu, server chỉ kiểm tra định dạng, quyền và thứ tự bước; không báo đúng/sai, đáp án chuẩn, sai số hoặc điểm. Chỉ nộp bài hợp lệ mới chấm và cập nhật tiến độ/sao.
 
-Luồng mục tiêu:
+**Khôi phục:** Refresh/restart giữ tất cả ước lượng đã khóa và câu trả lời chính xác đã được server xác nhận lưu. Nếu chưa nộp, mở câu đầu tiên chưa có câu trả lời chính xác đã lưu: chưa khóa ước lượng thì mở bước ước lượng, đã khóa thì mở bước tính chính xác. Nếu cả 12 câu đã lưu thì mở màn hình xem lại; nếu đã nộp thì mở kết quả. Không cần nhớ chính xác trang đang xem trước khi refresh.
 
-```text
-Mở bài từ luồng học hiện có
-  → nhập và xác nhận một số ước lượng
-  → nhập kết quả tính chính xác
-  → nộp bài để server chấm
-  → xem điểm, phản hồi hai phần và kết quả đã lưu
-```
+Nội dung đang gõ hoặc sửa nhưng chưa bấm lưu có thể mất; khi khôi phục dùng bản đã lưu gần nhất. Hiển thị rõ “Chưa lưu”/“Đã lưu”; nếu lưu lỗi thì giữ nội dung đang gõ, báo lỗi và không chuyển câu. Khi rời câu đang sửa mà chưa lưu, yêu cầu lưu hoặc bỏ thay đổi. Hệ thống kiểm soát thứ tự thao tác, không xác định được học sinh đã tính nhẩm trước hay chưa.
 
-Phần mềm kiểm soát thứ tự thao tác và thời điểm công bố đáp án. Phần mềm
-không chứng minh được học sinh chưa tính nhẩm chính xác trong đầu trước khi
-nhập ước lượng; đây là giới hạn cần ghi nhận khi đánh giá kỹ năng.
+## 3. Phạm vi và dữ liệu
 
-## 3. Phạm vi
-
-### 3.1. Trong phạm vi
-
-- Một dạng bài mới, dự kiến có `type = estimate`, tích hợp với luồng học cũ.
-- Học sinh nhập **một số nguyên** ở mỗi bước, không nhập khoảng tự do.
-- Rubric ước lượng thống nhất 10–7–3–0 cho phép nhân và phép chia.
-- Điểm từng câu gồm **50% ước lượng và 50% tính chính xác**.
-- Ít nhất 12 câu synthetic cố định, có thể tái lập từ dữ liệu của repo.
-- Server chấm, lưu các ước lượng đã xác nhận và kết quả đã nộp; giao diện đọc lại dữ liệu đã lưu khi refresh.
-- Kiểm thử nghiệp vụ/API, kiểm tra bàn phím và CI trên Pull Request.
-
-### 3.2. Phạm vi dữ liệu đề xuất cho MVP
-
-- Chọn phép nhân số nguyên dương và phép chia hết đã thuộc nội dung nhân/chia trong starter.
-- Số chia phải khác 0; kết quả đúng là số nguyên dương. Bộ mẫu ở Mục 7 tập trung vào các bảng nhân/chia đã có.
-- Giới hạn kỹ thuật dự kiến cho toán hạng và kết quả đúng: không quá 100.000.
-- Kết quả đúng bằng 0 chưa nằm trong bộ câu hỏi MVP vì sai số tương đối không xác định tại 0. Nếu dữ liệu câu hỏi có kết quả 0, trình kiểm tra fixture phải báo lỗi; không tự gán điểm bằng công thức chia cho 0.
-- Học sinh vẫn được nhập 0 như một câu trả lời số hợp lệ; với đáp án đúng dương, ước lượng 0 có sai số 100% và được 0 điểm phần ước lượng.
-
-### 3.3. Ngoài phạm vi
-
-- Viết lại ứng dụng, thêm chương trình Toán/SGK mới hoặc yêu cầu deploy public.
-- Sửa `server/auth.js`, authentication/session, tài khoản mẫu hoặc deployment.
-- Sửa các route `/api/auth/*`, `/api/teacher/*`, `/api/admin/*` mà tài liệu kiến trúc starter xác định ngoài phạm vi.
-- Chấm khoảng tự do, chấm lời giải bằng ngôn ngữ tự nhiên hoặc dùng LLM tạo đáp án/chấm điểm lúc chạy.
-- Dùng dữ liệu cá nhân thật hoặc kết nối với production.
-- Đánh giá đã được xác nhận về mặt sư phạm trên học sinh thật. Bộ fixture/test synthetic chỉ kiểm chứng logic phần mềm.
+- Một bộ cố định `phieu-uoc-luong-v1` gồm đúng 12 câu: **6 câu nhân và 6 câu chia hết**, dùng cho luyện tập và kiểm thử. Mỗi câu có dạng **số nhiều chữ số × số một chữ số** hoặc **số nhiều chữ số ÷ số một chữ số**, theo đúng thứ tự này.
+- Với cả hai phép toán, `a` là số nguyên từ 10 đến 100.000, `b` là số nguyên từ 1 đến 9 và đáp án là số nguyên dương không quá 100.000. Phép nhân yêu cầu `a × b <= 100000`; phép chia yêu cầu `a % b = 0`, không chấp nhận chia cho 0 hoặc chia có dư. Bộ V1 tại Mục 7 chọn `a` có 2–3 chữ số.
+- V1 hỗ trợ ước lượng cả phép nhân lẫn phép chia, không thay đổi các bài nhân/chia cũ. Quyết định phạm vi được ghi tại DECISIONS ADR-02.
+- Câu trả lời là chuỗi chữ số trong `[0, 1.000.000.000]`, được trim và chuẩn hóa số 0 ở đầu. Từ chối dữ liệu rỗng, âm, thập phân, dạng mũ, dấu phân cách, `null`, object/array và JSON number.
+- Không sửa auth/session, tài khoản mẫu, route auth/teacher/admin, deployment hoặc hành vi bốn type cũ. Không dùng LLM tạo/chấm đáp án lúc chạy.
+- Ngoài MVP: UI biên tập câu mới, nhiều bộ mới, dashboard/biểu đồ, trang lịch sử nhiều lượt, tự lưu nội dung đang gõ, framework mới và bảng cấu hình `estimation_questions`.
 
 ## 4. Quy tắc chấm
 
-Thang điểm 10–7–3–0 và tỷ trọng 50/50 đã được thống nhất. Nhóm đề xuất
-tính đúng biên 10%, 20%, 30% vào mức điểm cao hơn như bảng dưới đây;
+Với ước lượng đã khóa `u`, đáp án server tính `P > 0`, sai số `e = |u − P| / P`:
 
-### 4.1. Điểm ước lượng
-
-Với kết quả đúng `P > 0` và số học sinh ước lượng `u`:
-
-```text
-D = |u - P|
-e = 100 × D / P  (đơn vị: phần trăm)
-```
-
-| Điều kiện | Điểm ước lượng E / 10 | Nhãn phản hồi đề xuất |
+| Sai số | Điểm ước lượng E | Phản hồi đề xuất |
 |---|---:|---|
 | `0 ≤ e ≤ 10%` | 10 | Ước lượng tốt |
 | `10% < e ≤ 20%` | 7 | Ước lượng khá gần |
 | `20% < e ≤ 30%` | 3 | Ước lượng còn lệch |
 | `e > 30%` | 0 | Ước lượng chưa hợp lý |
 
-- Đúng tại 10%, 20%, 30% lần lượt nhận 10, 7, 3 điểm.
-- Một ước lượng trùng kết quả đúng có `e = 0`, nhận 10 điểm.
-- Không làm tròn ước lượng, đáp án đúng hoặc sai số trước khi chọn mức điểm.
-- Không ép câu trả lời về số tròn chục.
+Điểm tính chính xác `C = 10` nếu đúng, ngược lại bằng 0. Điểm câu `S = (E + C) / 2`; điểm bộ `round(100 × ΣS / (10 × N))`. Chỉ làm tròn tổng cuối. `correctCount` đếm câu đạt trọn điểm.
 
+Đúng biên 10%, 20%, 30% nhận lần lượt 10, 7, 3 điểm. Ước lượng 0 hợp lệ nhưng nhận 0 điểm khi `P > 0`. Cơ sở tham khảo và giới hạn sư phạm: DECISIONS ADR-01.
 
-### 4.2. Điểm tính chính xác và điểm câu
+## 5. Yêu cầu chức năng
 
-Với kết quả học sinh nhập ở bước hai là `v`:
+### 5.1. Năm chức năng chính
 
-```text
-C = 10 nếu v = P; ngược lại C = 0
-S = 0,5 × E + 0,5 × C
-```
+MVP gồm năm chức năng dưới đây. Các quy tắc về dữ liệu, quyền truy cập và giao diện là điều kiện nghiệm thu của các chức năng này. Mã FR được đánh lại theo cách nhóm mới; mã B, TP và MIG giữ nguyên.
 
-Mỗi câu có tối đa 10 điểm. Phải giữ riêng `E`, `C`, `S` để giải thích kết quả.
+| ID | Chức năng | Điều kiện nghiệm thu | Kiểm chứng |
+|---|---|---|---|
+| FR-01 | Mở và làm bộ bài ước lượng | Mở từ trang Luyện tập, không nhập URL thủ công. V1 có đúng 12 câu synthetic tại Mục 7: 6 câu nhân, 6 câu chia hết; toán hạng theo Mục 3, tái lập được. | TP-01, TP-02 |
+| FR-02 | Xác nhận và khóa ước lượng | Server kiểm tra, lưu và khóa ước lượng trước khi mở ô tính chính xác. Từ chối thay giá trị đã khóa; khi lượt còn đang làm, xác nhận lại cùng giá trị không đổi dữ liệu. Muốn nhập lại ước lượng phải tạo lượt mới. | TP-03 |
+| FR-03 | Lưu câu trả lời, nộp bài, chấm và phản hồi | Câu tiếp theo/Lưu và xem lại/Lưu thay đổi phải lưu câu trả lời chính xác trên server. Chỉ chấm khi bấm Nộp bài và đủ hai bước của cả 12 câu. Server chấm theo Mục 4, lưu kết quả; hiển thị riêng ước lượng, điểm E, kết quả bước hai, đáp án đúng, đúng/sai, điểm C và điểm câu. | TP-03, TP-04, TP-07, TP-08, TP-10 |
+| FR-04 | Khôi phục lượt làm | Refresh hoặc restart khôi phục ước lượng đã xác nhận, câu trả lời chính xác đã lưu và kết quả đã nộp; chọn màn hình theo Mục 2. Chỉ chủ sở hữu đọc được lượt; thông báo nội dung đang gõ chưa lưu có thể mất. | TP-06, TP-09 |
+| FR-05 | Nạp bộ câu hỏi vào ứng dụng | DB mới/cũ đều có bộ V1, đúng 12 câu và bảng trạng thái. Nạp lại không trùng hoặc thay dữ liệu đúng; phát hiện xung đột và rollback khi lỗi. Giữ nguyên dữ liệu cũ. Chi tiết tại Mục 5.3. | TP-12, MIG-01…MIG-08 |
 
-Ví dụ cho `6 × 7 = 42`:
+### 5.2. Điều kiện nghiệm thu chung
 
-| Ước lượng u | Kết quả v | Sai số gần đúng để minh họa | E | C | S |
-|---:|---:|---:|---:|---:|---:|
-| 40 | 42 | 4,76% | 10 | 10 | 10 |
-| 35 | 42 | 16,67% | 7 | 10 | 8,5 |
-| 30 | 42 | 28,57% | 3 | 10 | 6,5 |
-| 400 | 42 | 852,38% | 0 | 10 | 5 |
-| 40 | 41 | 4,76% | 10 | 0 | 5 |
-| 400 | 41 | 852,38% | 0 | 0 | 0 |
+- **Dữ liệu và quyền truy cập:** Server kiểm tra input theo Mục 3, báo lỗi theo trường; không ép dữ liệu lỗi thành 0 hoặc ghi kết quả một phần. Kiểm tra người sở hữu trước khi đọc/sửa lượt, không tin điểm hay đáp án chuẩn do client gửi. Trước nộp hợp lệ không trả đáp án, sai số hoặc điểm; bộ mới không được đi qua nhánh chấm cũ. Kiểm chứng bằng TP-05, TP-06, TP-07.
+- **Nộp bài nhất quán:** Nộp lại cùng lượt và đáp án trả kết quả cũ. Nộp lặp/đồng thời không tạo thêm attempt hoặc cộng sao hai lần; đổi đáp án sau nộp bị từ chối. Lỗi giữa lúc lưu phải rollback. Kiểm chứng bằng TP-10.
+- **Giao diện dễ dùng:** Hoàn thành luồng chính bằng Tab/Enter; có label, focus rõ và thông báo lỗi cho công nghệ hỗ trợ. Ô bước hai chưa mở không nhận focus; Enter xác nhận không tự nộp cả bài. Phản hồi dùng chữ, không chỉ màu. Kiểm chứng bằng TP-13.
+- **Tương thích và dữ liệu an toàn:** Phiếu cũ, bốn type cũ, hợp đồng dữ liệu, tiến độ/sao và thống kê tiếp tục hoạt động; không sửa các phần ngoài phạm vi ở Mục 3. Chỉ dùng dữ liệu synthetic/alias, không đưa PII hoặc secret vào repo. Kiểm chứng bằng TP-11 và rà soát dữ liệu.
 
-### 4.3. Tổng điểm và tiến độ — đề xuất tích hợp
+### 5.3. Quy tắc lưu trữ và nạp dữ liệu của FR-05
 
-- Các câu mới có cùng trọng số, mỗi câu tối đa 10 điểm.
-- Điểm bộ bài theo thang 100: `scorePercent = round(100 × ΣS / (10 × N))`, với `N` là số câu. Chỉ làm tròn một lần ở tổng cuối.
-- Với dạng mới, `correctCount` đếm số câu đạt trọn 10 điểm. Giao diện phải ghi “câu đạt trọn điểm”, tránh đồng nhất với số câu tính chính xác đúng.
+Fixture riêng phía server là nguồn chuẩn; code sinh prompt và đáp án rồi nạp vào `questions`/`question_sets`. Không nhân bản nội dung vào `seed.json`. Chỉ thêm một bảng trạng thái `estimation_runs`, liên kết kết quả tổng hợp với `attempts`.
 
+Bộ nạp chạy mỗi lần khởi động sau phần khởi tạo starter, trước khi phục vụ HTTP, độc lập với điều kiện DB trống. ID thiếu được bổ sung; ID cùng nội dung giữ nguyên; khác nội dung hoặc có câu thừa/trộn type phải báo lỗi. Tra ID trên toàn bảng câu hỏi, bao gồm trường hợp ID đã thuộc bộ khác. Không reset DB để nâng cấp.
 
-## 5. Yêu cầu chức năng và dữ liệu
+Đối chiếu cả metadata bộ (tiêu đề, loại bộ, bài học, sao thưởng, thời lượng) và các trường câu hỏi (prompt, đáp án, type, options, điểm, category, thứ tự, quan hệ bộ/bài học). Prompt và đáp án phải cùng khớp dữ liệu sinh từ fixture; trùng đáp án chưa đủ để kết luận cùng phép tính. Phiên bản nội dung được nhận diện qua ID bộ, phiên bản rubric được lưu trong snapshot; không cần bảng cấu hình riêng.
 
-| ID | Yêu cầu | Điều kiện nghiệm thu |
-|---|---|---|
-| FR-01 | Mở bộ câu hỏi từ trang Luyện tập | Học sinh đăng nhập bằng tài khoản giả lập (synthetic), vào trang Luyện tập và mở được bộ câu hỏi mới mà không cần tự nhập URL. Các phiếu bài tập cũ vẫn hoạt động bình thường. |
-| FR-02 | Có bộ câu hỏi mẫu cố định | Có ít nhất 12 câu hỏi mẫu (fixture), mỗi câu có ID riêng và phép tính hợp lệ. Khi lấy mã nguồn sạch và chạy lại, hệ thống vẫn tạo ra cùng bộ câu hỏi và đáp án. |
-| FR-03 | Xác nhận ước lượng trước khi nhập kết quả chính xác | Khi ước lượng chưa được xác nhận hợp lệ, ô nhập kết quả chính xác phải bị ẩn hoặc vô hiệu hóa, không thể chọn bằng chuột hay phím Tab. Chỉ mở ô này sau khi server đã lưu xác nhận ước lượng thành công. |
-| FR-04 | Không cho sửa ước lượng đã xác nhận | Trong cùng một lượt làm bài, học sinh không được thay đổi ước lượng đã xác nhận. Server phải từ chối yêu cầu đổi sang giá trị khác. Muốn nhập lại ước lượng, học sinh phải bắt đầu lượt làm bài mới. |
-| FR-05 | Chấm điểm trên server | Server tự lấy đáp án chuẩn và ước lượng đã xác nhận từ dữ liệu đã lưu để chấm theo Mục 4. Không dùng điểm hoặc đáp án chuẩn do phía người dùng gửi lên. |
-| FR-06 | Hiển thị rõ kết quả của từng bước | Sau khi nộp bài, hiển thị: ước lượng đã xác nhận, mức đánh giá và điểm ước lượng, kết quả chính xác học sinh đã nhập, đáp án chuẩn, kết luận đúng/sai ở bước hai và điểm của câu hỏi. Khi phù hợp, có nhận xét ước lượng quá cao hoặc quá thấp. |
-| FR-07 | Không để lộ đáp án trước khi nộp đủ hai bước | API lấy câu hỏi, xác nhận ước lượng và khôi phục lượt đang làm không được trả về đáp án chuẩn, sai số hoặc kết quả chấm. Nếu lượt làm bài chưa hoàn thành đủ hai bước, API nộp bài phải từ chối và không tiết lộ lời giải. |
-| FR-08 | Khôi phục bài làm sau khi tải lại trang | Khi tải lại trang, hệ thống khôi phục đúng ước lượng đã xác nhận, bước đang thực hiện và kết quả đã nộp của người dùng đó. Nội dung đang nhập nhưng chưa xác nhận hoặc chưa nộp có thể bị mất; giao diện phải thông báo rõ điều này. |
-| FR-09 | Gửi lại bài nộp mà không bị ghi nhận hai lần | Nếu lỗi mạng khiến cùng một yêu cầu nộp bài được gửi lại, server phải trả về kết quả đã chấm trước đó, không tạo thêm bản ghi nộp bài và không cộng sao lần nữa. |
-| FR-10 | Kiểm tra và báo lỗi dữ liệu nhập | Từ chối dữ liệu thiếu, rỗng, số âm, số thập phân, chữ hoặc dữ liệu sai cấu trúc. Thông báo phải chỉ rõ trường nào bị lỗi. Không tự chuyển dữ liệu lỗi thành số 0 và không lưu kết quả khi dữ liệu chưa hợp lệ. |
-| FR-11 | Dễ thao tác bằng bàn phím và dễ nhận biết lỗi | Các ô nhập có nhãn rõ ràng, thứ tự di chuyển bằng phím Tab hợp lý và có dấu hiệu cho biết thành phần đang được chọn. Có thể xác nhận và nộp bài bằng bàn phím. Lỗi phải được mô tả bằng chữ và được thông báo cho công nghệ hỗ trợ, như trình đọc màn hình. Không chỉ dùng màu sắc để thể hiện đúng/sai. |
-| FR-12 | Giữ nguyên chức năng cũ | Bốn loại câu hỏi cũ vẫn tiếp nhận dữ liệu gửi lên, chấm điểm và lưu kết quả theo quy tắc cũ. Không thay đổi các phần đã được xác định là ngoài phạm vi triển khai. |
+Fixture sai, thiếu bài học tham chiếu, schema không tương thích hoặc xung đột dữ liệu phải được báo rõ. Việc tạo bảng mới và nạp bộ/câu hỏi nằm trong một transaction; lỗi không để lại bộ đề hoặc cấu trúc mới tạo dở dang và không được bỏ qua để tiếp tục phục vụ tính năng. Phạm vi rollback là phần mở rộng, không bao gồm seed starter đã hoàn tất.
 
-Quy tắc input dự kiến: client gửi chuỗi số; server trim khoảng trắng, yêu cầu
-toàn bộ chuỗi chỉ gồm chữ số và nằm trong `[0, 1.000.000.000]`. Cho phép số 0
-ở đầu, chuẩn hóa để so sánh số; loại dạng mũ, dấu phân cách hàng nghìn, chuỗi
-khoảng và giá trị JSON sai kiểu.
+Đọc đề/tạo lượt mới phải phát hiện DB bị sửa lệch fixture sau khởi động và từ chối có kiểm soát, không tiết lộ đáp án. Kiểm tra trong API chỉ đọc, không tự thêm/sửa/xóa dữ liệu để che xung đột. Lượt đã tạo dùng snapshot bất biến. Đổi nội dung đã phát hành cần ID/version mới hoặc migration được thống nhất.
 
-Trong MVP, tất cả câu hỏi mới trong một bộ bài phải dùng chung type: "estimate", áp dụng cho cả phép nhân và phép chia hết.
+Kiểm tra sai lệch lúc chạy (MIG-08) là cam kết kỹ thuật bổ sung do nhóm lựa chọn, vẫn thuộc tiêu chí nghiệm thu V1 của nhóm. Đây không phải một tiêu chí B mới hoặc trích nguyên văn yêu cầu đề; lý do giữ và giới hạn thực hiện nằm ở DECISIONS ADR-05.
 
-Chưa hỗ trợ bộ bài chứa đồng thời câu hỏi type cũ và câu hỏi estimate. Nếu phát hiện cấu hình trộn hai loại này, hệ thống phải báo lỗi và từ chối sử dụng bộ bài, không được bỏ qua câu hỏi không hỗ trợ rồi chỉ chấm điểm các câu còn lại.
+### 5.4. Kiểm chứng nâng cấp dữ liệu
 
+| Yêu cầu | Các ca trong TEST_PLAN |
+|---|---|
+| DB mới có schema và bộ 12 câu đúng | MIG-01 |
+| DB cũ giữ nguyên dữ liệu, chạy lại không trùng, bổ sung phần thiếu hợp lệ | MIG-02, MIG-03 |
+| Phát hiện xung đột ID/nội dung và fixture không hợp lệ | MIG-04, MIG-05 |
+| Không thay đổi ý nghĩa lượt đang làm hoặc kết quả đã nộp | MIG-06 |
+| Rollback khi lỗi giữa quá trình nạp, thiếu bài học hoặc sai schema | MIG-07 |
+| Phát hiện DB bị sửa trong lúc ứng dụng đang chạy | MIG-08 |
 
 ## 6. Đối chiếu tiêu chí đề thi
 
+| Tiêu chí | Bằng chứng cần có |
+|---|---|
+| B-01 | FR-01: lối vào trong luồng học hiện tại; TP-01. |
+| B-02 | FR-01, FR-05: bộ 12 câu tái lập; TP-02, TP-12 và MIG-01…MIG-08. |
+| B-03 | FR-03 và quy tắc tất định tại Mục 4; TP-04. |
+| B-04 | Mục 5.2: không lộ đáp án trước nộp; TP-07. |
+| B-05 | FR-02, FR-03, FR-04 và Mục 5.2: server chấm/lưu, khôi phục, chống nộp trùng; TP-03, TP-09, TP-10. |
+| B-06 | FR-03: phản hồi riêng hai phần; TP-08. |
+| B-07 | Mục 3, 5.2: diff không thay đổi phần ngoài phạm vi; TP-11. |
+| B-08 | Test normal, boundary, invalid input và scoring; TP-02, TP-04, TP-05. |
+| B-09 | `npm test` thành công từ clean checkout. |
+| B-10 | CI trên PR chạy `npm ci` và `npm test`. |
+| B-11 | Mục 5.2: chỉ dữ liệu synthetic/alias; không thêm PII, secret hoặc DB cá nhân. |
+| B-12 | Mục 5.2: kiểm tra bàn phím và lỗi; TP-05, TP-13. |
 
-| Tiêu chí | Cách đáp ứng dự kiến | Bằng chứng nghiệm thu dự kiến |
-|---|---|---|
-| B-01 | Đáp ứng FR-01 và FR-12: dùng trang làm bài chung, mở bộ câu hỏi mới từ trang Luyện tập và giữ các phiếu cũ hoạt động bình thường. | Demo thao tác từ menu hiện có đến bộ câu hỏi mới; kiểm tra các phiếu cũ vẫn mở đúng. |
-| B-02 | Đáp ứng FR-02: chuẩn bị bộ câu hỏi mẫu cố định theo Mục 7. | Bộ dữ liệu mẫu được lưu và quản lý phiên bản trong repo; có test kiểm tra tính hợp lệ của dữ liệu. |
-| B-03 | Áp dụng quy tắc chấm điểm ở Mục 4 và quyết định thiết kế ADR-01. | Có unit test với kết quả mong đợi được tính độc lập với hàm chấm điểm; kiểm tra đủ ba mốc biên của quy tắc chấm. |
-| B-04 | Đáp ứng FR-07: API chỉ trả đáp án và kết quả chấm sau khi bài được nộp hợp lệ. | Kiểm tra dữ liệu trả về từ các API GET/POST trước khi nộp; kiểm tra trường hợp nộp khi chưa hoàn thành đủ hai bước. |
-| B-05 | Đáp ứng FR-05, FR-08 và FR-09: chấm trên server, khôi phục được bài làm và không ghi nhận trùng khi gửi lại bài nộp. | Có test tích hợp; demo tải lại trang và khởi động lại server với cùng cơ sở dữ liệu để kiểm tra trạng thái, kết quả vẫn được giữ đúng. |
-| B-06 | Đáp ứng FR-06: hiển thị riêng đánh giá phần ước lượng (E) và phần kết quả chính xác (C). | Kiểm thử các tổ hợp đúng/sai của hai phần; kiểm tra điểm và thông báo hiển thị tương ứng. |
-| B-07 | Tuân thủ phạm vi ở Mục 3.3 và FR-12; không sửa các phần đã được quy định là ngoài phạm vi. | So sánh thay đổi với mã nguồn starter, tập trung vào xác thực, các route không được sửa, tài khoản và cấu hình triển khai. |
-| B-08 | Thực hiện kế hoạch kiểm thử ở Mục 8. | Có unit test và test tích hợp cho dữ liệu hợp lệ, giá trị tại các mốc giới hạn, dữ liệu không hợp lệ và quy tắc chấm điểm. |
-| B-09 | Bổ sung lệnh `npm test` để chạy bộ kiểm thử. | Có nhật ký chạy test từ một bản mã nguồn sạch. |
-| B-10 | Thiết lập GitHub Actions tự động chạy `npm ci` và `npm test` khi có Pull Request. | Có đường dẫn đến lần chạy GitHub Actions của Pull Request để kiểm tra kết quả. |
-| B-11 | Dùng dữ liệu và tài khoản giả lập, tên bí danh; không đưa mật khẩu, khóa API hoặc thông tin bí mật vào repo. | Rà soát dữ liệu, các thay đổi trong Git và danh sách kiểm tra bảo mật. |
-| B-12 | Đáp ứng FR-10 và FR-11: kiểm tra dữ liệu nhập, báo lỗi rõ ràng và hỗ trợ thao tác bằng bàn phím. | Có danh sách kiểm tra thao tác chỉ bằng bàn phím và kết quả kiểm tra cách hiển thị, thông báo lỗi. |
+## 7. Bộ câu hỏi V1 dự kiến
 
-## 7. Bộ câu hỏi MVP dự kiến
+Cấu hình sẽ lưu trong `data/estimation-fixtures.json`; đáp án dưới đây là giá trị tham chiếu để review/test. Runtime tính đáp án từ phép toán.
 
-Đây là dữ liệu đề xuất cho thiết kế, **chưa được thêm vào seed**. Các câu nằm
-trong nội dung bảng nhân/chia đã xuất hiện trong starter.
+Cả 12 câu đều có toán hạng thứ nhất nhiều chữ số và toán hạng thứ hai một chữ số. Chọn các số thuận tiện để luyện ước lượng, ví dụ `39 × 6 ≈ 40 × 6 = 240` và `192 ÷ 6 ≈ 180 ÷ 6 = 30`. Đây là điều chỉnh bộ dự kiến trước khi triển khai; quy tắc đổi ID/version cho nội dung đã phát hành vẫn giữ nguyên.
 
-| ID dự kiến | Phép tính | Kết quả đúng |
+| ID | Phép tính | Đáp án |
 |---|---|---:|
-| est-mul-01 | 6 × 4 | 24 |
-| est-mul-02 | 6 × 5 | 30 |
-| est-mul-03 | 6 × 6 | 36 |
-| est-mul-04 | 6 × 7 | 42 |
-| est-mul-05 | 6 × 8 | 48 |
-| est-mul-06 | 7 × 8 | 56 |
-| est-div-01 | 24 ÷ 2 | 12 |
-| est-div-02 | 54 ÷ 3 | 18 |
-| est-div-03 | 30 ÷ 6 | 5 |
-| est-div-04 | 36 ÷ 6 | 6 |
-| est-div-05 | 42 ÷ 6 | 7 |
-| est-div-06 | 54 ÷ 6 | 9 |
+| est-mul-01 | 39 × 6 | 234 |
+| est-mul-02 | 47 × 8 | 376 |
+| est-mul-03 | 58 × 4 | 232 |
+| est-mul-04 | 64 × 3 | 192 |
+| est-mul-05 | 76 × 5 | 380 |
+| est-mul-06 | 85 × 7 | 595 |
+| est-div-01 | 192 ÷ 6 | 32 |
+| est-div-02 | 248 ÷ 4 | 62 |
+| est-div-03 | 315 ÷ 5 | 63 |
+| est-div-04 | 432 ÷ 8 | 54 |
+| est-div-05 | 567 ÷ 7 | 81 |
+| est-div-06 | 864 ÷ 9 | 96 |
 
-Lưu ý: Khi kết quả nhỏ và chỉ nhận số nguyên, mức 10 điểm có
-thể chỉ chứa đáp án đúng. Ví dụ `P = 5` thì 4 và 6 đều lệch 20%, nhận 7 điểm
-ước lượng; chỉ 5 nhận 10 điểm. 
+## 8. Nghiệm thu
 
-## 8. Kế hoạch kiểm thử
+Thực hiện TEST_PLAN trên DB tạm và ghi bằng chứng vào `TEST_REPORT.md`. Chỉ nghiệm thu khi đủ B-01…B-12, có test biên và chứng minh nâng cấp an toàn trên cả DB mới lẫn DB cũ.
 
-### 8.1. Rubric và phép tính
+Sau khi bộ test được triển khai, checkout sạch chỉ cần `npm ci` rồi `npm test` để tự tạo các DB kiểm thử. DB cũ được dựng từ schema/dữ liệu synthetic lưu trong repo, chưa chạy bộ nạp mới; không lấy DB đang dùng của nhóm. Bằng chứng gồm nội dung bản ghi trước/sau, kết quả chạy lặp/rollback và mở lại cùng file DB. Các cập nhật tài khoản mẫu vốn có của starter được tách khỏi tác động của bộ nạp khi kiểm tra bảo toàn dữ liệu.
 
-Ngoài 12 câu học tập, unit test có thể dùng `P = 100` để kiểm tra biên dễ đọc.
-
-| P | Ước lượng u | Điểm E mong đợi | Ý nghĩa |
-|---:|---|---:|---|
-| 100 | 100, 91, 109 | 10 | Chính xác hoặc dưới 10% |
-| 100 | 90, 110 | 10 | Đúng biên 10% |
-| 100 | 89, 111 | 7 | Vượt 10% |
-| 100 | 80, 120 | 7 | Đúng biên 20% |
-| 100 | 79, 121 | 3 | Vượt 20% |
-| 100 | 70, 130 | 3 | Đúng biên 30% |
-| 100 | 69, 131 | 0 | Vượt 30% |
-| 99 | 100 | 10 | Không loại chỉ vì khác số chữ số |
-| 42 | 400 | 0 | Đáp án quá xa |
-| 5 | 4, 6 | 7 | Kết quả nhỏ |
-| 42 | 0 | 0 | Số 0 là câu trả lời hợp lệ, chất lượng ước lượng bằng 0 điểm |
-
-- Kiểm tra công thức 50%–50% bằng các giá trị cụ thể trong Mục 4.2.
-- Kiểm tra tổng điểm trên nhiều câu, cách làm tròn cuối, `correctCount` và tiến độ.
-- Kiểm tra phép chia hết, mẫu số 0, phép chia không hết, toán hạng sai miền và fixture sai đáp án.
-
-### 8.2. API, lưu trữ và hồi quy
-
-- Kiểm tra quyền truy cập:** Từ chối yêu cầu khi người dùng chưa đăng nhập, truy cập lượt làm bài của người khác, gửi câu hỏi không thuộc lượt đang làm hoặc dùng ID không tồn tại.
-- Kiểm tra dữ liệu nhập:** Từ chối dữ liệu rỗng, `null`, thiếu trường bắt buộc, JSON sai kiểu, các giá trị như `40a`, `40.5`, `-40`, `1e3` hoặc số vượt giới hạn cho phép. Khi dữ liệu không hợp lệ, không lưu bản ghi kết quả.
-- Kiểm tra trình tự làm bài và chống sửa dữ liệu:** Không cho sửa ước lượng sau khi đã xác nhận và không cho nộp kết quả khi chưa xác nhận ước lượng. Khi nộp bài, hệ thống phải tự tính điểm và dùng ước lượng đã lưu, không tin điểm hoặc ước lượng khác do người dùng gửi lên.
-- Không lộ đáp án trước khi nộp:** Mọi phản hồi từ server trước khi nộp bài đều không chứa đáp án chuẩn hoặc kết quả chấm, kể cả khi người dùng gọi API trực tiếp.
-- Lưu và khôi phục đúng trạng thái:** Sau khi tải lại trang ở bước đã xác nhận hoặc đã nộp bài, dữ liệu vẫn đúng. Khi khởi động lại server với cùng cơ sở dữ liệu, kết quả vẫn được giữ nguyên và chỉ chủ sở hữu lượt làm bài mới được đọc.
-- Không ghi nhận một lượt nhiều lần:** Nộp lại hoặc gửi nhiều yêu cầu nộp cùng lúc cho một lượt không được tạo thêm bản ghi làm bài (`attempts`) hay cộng sao hai lần.
-- Giữ đúng chức năng cũ:** Bốn loại câu hỏi cũ, cách cộng sao dựa trên điểm cao nhất và cách tính thống kê độ chính xác vẫn hoạt động theo thiết kế đã công bố.
-- Bổ sung dữ liệu mà không làm mất dữ liệu cũ:** Có thể thêm bộ dữ liệu mẫu mới (`fixture`) vào cơ sở dữ liệu đang sử dụng mà không xóa tài khoản hoặc tiến độ học tập.
-
-### 8.3. UI và CI
-
-- Kiểm tra đi từ trang Luyện tập tới bộ bài, xác nhận/nộp bằng Tab/Enter, focus và lỗi dễ hiểu.
-- CI cài dependency bằng `npm ci` rồi chạy `npm test` trên Pull Request.
-- Test sử dụng DB tạm; kết quả phải được ghi trong `TEST_REPORT.md` sau khi chạy thật.
+Các mục trên là tiêu chí nghiệm thu. Hiện chưa có code migration, test tính năng hoặc kết quả chạy để kết luận góp ý #4 đã hoàn thành.

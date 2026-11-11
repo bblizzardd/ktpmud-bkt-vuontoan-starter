@@ -14,6 +14,12 @@ Web học Toán lớp 3 gồm giao diện học sinh (bài học, luyện tập,
 và khu vực giáo viên (theo dõi lớp, cấp tài khoản). Đợt 1 đã nối **backend thật**:
 đăng nhập/đăng xuất, chấm điểm trên server, lưu điểm & tiến độ vào cơ sở dữ liệu SQLite.
 
+## Ý tưởng mở rộng Track B (chưa triển khai)
+
+Thêm dạng bài **“Ước lượng trước khi tính đúng”** vào luồng luyện tập, gồm 12 câu: 6 câu nhân và 6 câu chia hết, với số nhiều chữ số nhân hoặc chia cho số một chữ số. Mỗi câu: nhập và khóa ước lượng → tính chính xác → bấm **Câu tiếp theo** để lưu trên server, giúp tải lại không mất các câu đã lưu. Cuối bộ, học sinh xem lại và nộp bài để nhận điểm, phản hồi riêng cho ước lượng và kết quả tính.
+
+Chi tiết: [Yêu cầu](REQUIREMENTS.md), [Thiết kế](DECISIONS.md), [Kế hoạch kiểm thử](TEST_PLAN.md).
+
 ## 1. Cách chạy
 
 Yêu cầu: máy có **Node.js 18+**.

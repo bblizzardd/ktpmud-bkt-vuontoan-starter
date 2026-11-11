@@ -1,49 +1,93 @@
 # Kế hoạch kiểm thử — Ước lượng trước khi tính đúng
 
-**Trạng thái:** Kế hoạch dự kiến, chưa phải kết quả kiểm thử thực tế.  
+**Trạng thái:** Chưa triển khai/chạy bộ test tính năng.
 
-## 1. Mục tiêu và chuẩn bị
+## 1. Môi trường
 
-Kiểm tra luồng hai bước, cách chấm điểm, lưu bài làm và quyền truy cập; bảo đảm tính năng mới không làm sai chức năng cũ. Áp dụng cùng quy tắc cho phép nhân và phép chia hết.
+Dùng `node:test`, `node:assert/strict`, tài khoản synthetic và fixture V1 tại REQUIREMENTS Mục 7. Đặt `DB_PATH` tới DB tạm trước khi import DB; đóng server/DB trước khi dọn thư mục tạm. Không dùng DB của nhóm hoặc `reset-db`.
 
-- Dùng Node.js theo yêu cầu của dự án, cơ sở dữ liệu tạm và hai tài khoản giả lập để kiểm tra quyền sở hữu. Không dùng dữ liệu học tập thật hoặc chạy `reset-db` trên dữ liệu đang sử dụng.
-- Chuẩn bị ít nhất 12 câu hỏi mẫu theo REQUIREMENTS Mục 7 và dữ liệu riêng để kiểm tra các mốc điểm.
-- Dự kiến dùng `node:test` cho kiểm thử tự động; kiểm tra giao diện bằng thao tác thực tế. Hiện dự án chưa có script `npm test`; cần bổ sung khi triển khai.
+Kết quả mong đợi phải tính độc lập với hàm đang kiểm thử. Test restart mở lại cùng file DB tạm; kiểm tra giao diện bằng thao tác thực tế.
 
-## 2. Các nhóm kiểm thử chính
+## 2. Chức năng và hồi quy
 
-| ID | Nội dung kiểm tra | Kết quả mong đợi |
+| ID | Trường hợp | Kết quả mong đợi |
 |---|---|---|
-| TP-01 | Đăng nhập, mở bộ mới từ trang Luyện tập và mở lại phiếu cũ. | Không cần nhập URL thủ công; bộ mới và phiếu cũ đều mở đúng. |
-| TP-02 | Kiểm tra bộ mẫu: ID, phép tính, đáp án, giới hạn dữ liệu; thử bộ trộn type cũ với `estimate`. | Có ít nhất 12 câu cố định, ID duy nhất. Từ chối chia cho 0, chia không hết, kết quả 0, số ngoài giới hạn, đáp án sai và bộ trộn type không hỗ trợ. |
-| TP-03 | Nhập và xác nhận ước lượng; xác nhận lại cùng giá trị; thử đổi giá trị hoặc nộp thiếu bước. | Chỉ mở ô kết quả sau khi server lưu xác nhận. Xác nhận lại cùng giá trị không đổi dữ liệu; đổi giá trị đã khóa hoặc nộp thiếu bước bị từ chối. |
-| TP-04 | Kiểm tra điểm ước lượng tại, dưới và trên các mốc 10%, 20%, 30%; kết hợp kết quả bước hai đúng/sai. | Điểm đúng theo Mục 3 bên dưới; điểm câu là `(E + C) / 2`, tổng bộ chỉ làm tròn một lần; `correctCount` đếm câu đạt trọn điểm. |
-| TP-05 | Gửi dữ liệu thiếu, rỗng, `null`, sai kiểu JSON, `40a`, `40.5`, `-40`, `1e3` và số vượt giới hạn. Thử chuỗi `"0"`, `" 042 "` và hai đầu giới hạn. | Dữ liệu lỗi được báo theo trường, không bị đổi thành 0 và không lưu kết quả một phần. Chuỗi số hợp lệ trong khoảng 0–1.000.000.000 được nhận; `" 042 "` chuẩn hóa thành `"42"`. |
-| TP-06 | Gọi API khi chưa đăng nhập, dùng lượt của người khác, ID không tồn tại hoặc câu hỏi không thuộc lượt. | Từ chối yêu cầu; không đọc hoặc sửa được dữ liệu trái quyền. Chưa đăng nhập trả 401; lượt không tồn tại hoặc không thuộc người dùng trả 404. |
-| TP-07 | Gọi trực tiếp API lấy đề, xác nhận, khôi phục và nộp thiếu bước; gửi điểm giả, đáp án chuẩn hoặc ước lượng khác trong bài nộp. | Trước khi nộp hợp lệ không lộ đáp án, sai số hay kết quả chấm. Từ chối trường không được phép; server dùng đáp án và ước lượng đã lưu để chấm. |
-| TP-08 | Nộp bài và xem phản hồi cho các mức ước lượng, kết hợp bước hai đúng/sai. | Hiển thị riêng ước lượng, mức đánh giá, điểm E, kết quả đã nhập, đáp án chuẩn, đúng/sai bước hai, điểm C và điểm câu; có nhận xét quá cao/quá thấp khi phù hợp. |
-| TP-09 | Tải lại trang sau xác nhận, sau nộp; khởi động lại server với cùng cơ sở dữ liệu. | Khôi phục đúng trạng thái và kết quả; chỉ chủ sở hữu đọc được. Có thông báo rằng nội dung chưa xác nhận/chưa nộp có thể mất. |
-| TP-10 | Gửi lại cùng bài nộp, nộp đồng thời, gửi đáp án khác sau nộp; tạo lỗi giữa quá trình lưu. | Cùng lượt và đáp án trả cùng kết quả; không thêm `attempts` hoặc cộng sao hai lần. Đáp án khác sau nộp trả 409. Khi lưu lỗi, không còn dữ liệu ghi dở dang. |
-| TP-11 | Kiểm tra bốn type cũ, điểm tốt nhất, sao và thống kê của giáo viên. | Giữ cách nhận dữ liệu, chấm và lưu của type cũ. Không giảm điểm tốt nhất hoặc cộng sao lặp. Thống kê độ chính xác đọc đúng phần tính chính xác; điểm tổng của bộ mới phản ánh tỷ trọng 50/50. |
-| TP-12 | Nạp bộ mẫu vào cơ sở dữ liệu đã có tài khoản và tiến độ; nạp lại; thử ID trùng nhưng khác nội dung. | Không mất tài khoản, tiến độ hoặc lịch sử. Cùng ID và nội dung thì bỏ qua; khác nội dung thì báo xung đột. |
-| TP-13 | Làm bài chỉ bằng Tab/Enter và kiểm tra thông báo lỗi bằng trình đọc màn hình. | Các ô nhập và nút bấm có tên hoặc nhãn dễ hiểu. Khi nhấn Tab, con trỏ di chuyển theo đúng thứ tự làm bài và giao diện đánh dấu rõ ô hoặc nút đang được chọn. Trước khi xác nhận ước lượng, người dùng không thể chọn hoặc nhập vào ô kết quả chính xác. Nhấn Enter để xác nhận ước lượng của một câu, không được tự động nộp toàn bộ bài. Thông báo lỗi phải được trình đọc màn hình đọc được. Kết quả phải ghi rõ bằng chữ “Đúng” hoặc “Sai”, không chỉ dùng màu sắc để phân biệt. |
+| TP-01 | Mở bộ mới từ Luyện tập và mở phiếu cũ. | Đúng luồng, không cần URL thủ công. |
+| TP-02 | Kiểm tra đúng 12 câu tại REQUIREMENTS Mục 7: 6 câu `operator = "*"`, 6 câu `operator = "/"`, ID duy nhất, `10 <= a <= 100000`, `1 <= b <= 9`, đáp án nguyên dương không quá 100000; phép chia phải có `a % b = 0`; prompt/đáp án; thử trộn type. | Mỗi câu là số nhiều chữ số nhân hoặc chia hết cho số một chữ số theo đúng thứ tự, đáp án khớp bảng tham chiếu; bộ tái lập được, cấu hình sai bị từ chối. |
+| TP-03 | Làm hai bước từng câu; xác nhận/lưu lặp, sửa câu trả lời chính xác, sửa ước lượng, nhảy câu, nộp thiếu bước. | Chỉ mở bước hai sau khi server khóa ước lượng; Câu tiếp theo lưu câu trả lời rồi mới chuyển câu. Lặp cùng giá trị giữ nguyên; được sửa câu trả lời trước nộp, không sửa ước lượng; nhảy/thiếu bước trả 409. |
+| TP-04 | Đúng/sát biên, E kết hợp C đúng/sai, tổng bộ. | Đúng bảng Mục 3, tỷ trọng 50/50; chỉ làm tròn tổng cuối; đếm câu đạt trọn điểm. |
+| TP-05 | Với giá trị ước lượng và câu trả lời chính xác: rỗng, thiếu, `null`, JSON number/object/array, `40a`, `40.5`, `-40`, `1e3`, dấu phân cách, vượt giới hạn. | Trả 400 theo trường, không ghi dữ liệu lỗi. Chấp nhận `"0"`, `"1000000000"`; chuẩn hóa `" 042 "` thành `"42"`. Câu trả lời sai toán nhưng đúng định dạng vẫn được lưu. |
+| TP-06 | Chưa đăng nhập, lượt người khác/không tồn tại, câu không thuộc lượt. | Trả 401/404 phù hợp; không đọc/sửa trái quyền. |
+| TP-07 | GET đề/khôi phục, xác nhận, PUT lưu câu trả lời, nộp thiếu `runId`; gửi điểm/đáp án chuẩn/ước lượng giả. | Trước nộp không lộ đáp án chuẩn, đúng/sai, sai số, điểm hoặc snapshot; được trả input của chính học sinh. Lưu nháp không tạo attempt/cộng sao; không lọt nhánh chấm cũ. |
+| TP-08 | Nộp đủ hai bước với các tổ hợp E/C. | Hiện riêng input, điểm và phản hồi hai phần; chỉ lúc này công bố đáp án. |
+| TP-09 | Refresh/restart sau khóa ước lượng, sau lưu câu trả lời, khi đang sửa chưa lưu, sau lưu câu 12 và sau nộp; response lưu bị mất. | Khôi phục bản đã lưu gần nhất của chủ sở hữu; mở câu đầu chưa lưu câu trả lời, màn hình xem lại hoặc kết quả theo ADR-04. Input chưa lưu có thể mất; GET/thử lại xác nhận được lần lưu thành công dù mất response. |
+| TP-10 | Nộp lặp/đồng thời, answers khác bản lưu, đổi đáp án sau nộp, PUT lưu đồng thời với nộp, lỗi giữa transaction. | Một attempt, không cộng sao lặp; dữ liệu không khớp trả 409, không tự ghi đè. Nếu nộp trước thì PUT trả 409; nếu PUT trước làm answers gửi nộp bị cũ thì nộp trả 409. Lỗi rollback toàn bộ lần ghi tương ứng. |
+| TP-11 | Bốn type cũ, tiến độ/sao, thống kê; rà soát diff. | Giữ hành vi cũ, không giảm điểm tốt nhất, không sửa phần ngoài phạm vi. |
+| TP-12 | Nâng cấp/nạp fixture. | Đạt MIG-01…MIG-08. |
+| TP-13 | Chỉ dùng Tab/Enter và trình đọc màn hình. | Label/focus rõ; bước hai chưa mở không nhận focus; Enter xác nhận không nộp cả bài; lỗi được đọc, kết quả có chữ. |
+
+### 2.1. Kịch bản luồng từng câu và khôi phục
+
+Các ca dưới đây cụ thể hóa TP-03, TP-07, TP-09, TP-10 và TP-13; dùng cùng `runId` qua refresh/restart, DB tạm.
+
+| Thao tác | Kết quả mong đợi |
+|---|---|
+| Tạo lượt; gọi thẳng lưu câu trả lời câu 1 hoặc khóa ước lượng câu 2. | Trả 409, không ghi dữ liệu; giao diện ở ước lượng câu 1. |
+| Khóa ước lượng câu 1, refresh. | Khôi phục ước lượng khóa; mở tính chính xác câu 1; chưa có điểm/phản hồi đúng sai. |
+| Nhập câu trả lời câu 1, bấm Câu tiếp theo, chờ lưu thành công rồi refresh/restart. | Map nháp có câu 1; mở ước lượng câu 2. Chưa tạo attempt, chưa cập nhật tiến độ/sao. |
+| Gõ câu trả lời rồi gặp lỗi lưu; hoặc server lưu thành công nhưng mất response. | Không tự chuyển câu khi chưa xác nhận thành công; giữ input để thử lại. GET/thử lại cùng giá trị phục hồi bản đã lưu, không ghi lặp. |
+| Quay lại sửa câu 1; rời câu khi chưa lưu; sau đó thử lưu và refresh. | Có lựa chọn lưu/bỏ thay đổi. Chưa lưu thì refresh lấy bản cũ; lưu thành công thì lấy bản mới. Ước lượng giữ nguyên, các câu sau không bị xóa. |
+| Lưu câu trả lời `"0"` rồi tiếp tục. | Coi là đã lưu hợp lệ; không nhầm với chưa trả lời; chỉ chấm sai/đúng khi nộp. |
+| Làm tuần tự đủ 12 câu, bấm Lưu và xem lại ở câu 12, refresh. | Mở màn hình xem lại với 12 input đã lưu; vẫn `in_progress`, chưa chấm và chưa có attempt. |
+| Nộp answers thiếu câu, thừa ID, sai kiểu hoặc hợp lệ nhưng khác bản server. | Thiếu câu trả 409; ID ngoài lượt/sai kiểu trả 400; khác bản đã lưu trả 409. Không ghi đè bản nháp hoặc tạo kết quả. |
+| Nộp đủ bộ; refresh; thử PUT sửa câu trả lời và POST sửa ước lượng. | Khôi phục kết quả đã nộp; cả hai API ghi trả 409. Nộp lại cùng answers trả đúng kết quả cũ, chỉ một attempt. |
+| Dùng Enter ở ước lượng và tính chính xác, kể cả câu 12. | Chỉ xác nhận ước lượng hoặc lưu câu trả lời theo nút của bước; không tự nộp bộ. Lỗi lưu giữ focus/input; thành công đưa focus đến bước tiếp theo. |
 
 ## 3. Dữ liệu kiểm tra điểm
 
-Với đáp án đúng `P = 100`, kiểm tra điểm ước lượng `E` như sau:
+Với `P = 100`:
 
-| Ước lượng | Điểm E mong đợi |
+| Ước lượng | E mong đợi |
 |---|---:|
 | 100, 91, 109, 90, 110 | 10 |
-| 89, 111, 80, 120 | 7 |
-| 79, 121, 70, 130 | 3 |
+| 89, 111, 81, 119, 80, 120 | 7 |
+| 79, 121, 71, 129, 70, 130 | 3 |
 | 69, 131, 0 | 0 |
 
-Kiểm tra thêm: `P = 5`, ước lượng 4 hoặc 6 được 7 điểm; `P = 99`, ước lượng 100 được 10 điểm; `P = 42`, ước lượng 400 được 0 điểm. Mỗi mức E cần kết hợp với bước hai đúng (`C = 10`) và sai (`C = 0`). Kết quả mong đợi phải được tính độc lập, không lấy từ hàm chấm đang kiểm thử.
+Kiểm tra thêm: `P=5, u=4/6 → E=7`; `P=99, u=100 → E=10`; `P=42, u=400 → E=0`. Mỗi mức E kết hợp `C=10` và `C=0`, kiểm tra `S=(E+C)/2`.
 
-## 4. Cách chạy và điều kiện hoàn thành
+Các giá trị `P` ở trên là dữ liệu unit test cho hàm chấm, không phải câu hỏi của bộ V1. Kiểm tra tích hợp TP-04/TP-08 bằng câu thật `est-mul-05`, `76 × 5 = 380`: khóa ước lượng, nộp kết quả chính xác rồi đối chiếu điểm server với bảng sau.
 
-1. Sau khi triển khai bộ test, lấy mã nguồn sạch, chạy `npm ci` rồi `npm test` trên cơ sở dữ liệu tạm.
-2. Thực hiện các kiểm tra giao diện, tải lại trang và khởi động lại server trong bảng trên.
-3. Kiểm tra GitHub Actions chạy `npm ci` và `npm test` thành công trên Pull Request.
-4. Ghi kết quả từng nhóm TP-01 đến TP-13 là **Đạt / Không đạt / Chưa chạy** vào `TEST_REPORT.md`, kèm lỗi phát hiện, nhật ký test, ảnh hoặc đường dẫn CI phù hợp.
+| Ước lượng | Sai số | E mong đợi |
+|---|---|---:|
+| 342, 418 | 10% | 10 |
+| 304, 456 | 20% | 7 |
+| 266, 494 | 30% | 3 |
+| 265, 495 | Lớn hơn 30% | 0 |
+
+Mỗi giá trị dùng một lượt mới; kết hợp đáp án chính xác `"380"` (`C=10`) và đáp án sai `"381"` (`C=0`) để kiểm tra điểm câu và phản hồi hai phần. Đi qua các API khóa ước lượng/lưu câu trả lời theo đúng thứ tự cả 12 câu; các câu còn lại dùng ước lượng và câu trả lời bằng đáp án tham chiếu trong REQUIREMENTS. Chỉ sau khi nộp cả bộ mới kiểm tra E/C/S của câu `est-mul-05`; không nộp riêng một câu để thay cho ca tích hợp.
+
+Kiểm tra tích hợp cả phép chia bằng câu `est-div-01`, `192 ÷ 6 = 32`: ước lượng `"30"` có sai số 6,25%, nhận `E=10`; ước lượng `"20"` có sai số 37,5%, nhận `E=0`. Mỗi ước lượng kết hợp câu trả lời `"32"` (`C=10`) và `"33"` (`C=0`), mỗi tổ hợp một lượt mới. Làm đủ và nộp cả 12 câu như trên; kiểm tra server tính thương đúng, phản hồi hai phần và `S=(E+C)/2`.
+
+## 4. Fixture và migration
+
+| ID | Trường hợp | Kết quả mong đợi |
+|---|---|---|
+| MIG-01 | DB mới, chạy khởi tạo. | Schema đúng; một bộ V1, 12 câu; prompt/đáp án/metadata/quan hệ đúng; dữ liệu starter đầy đủ. |
+| MIG-02 | DB cũ có users, câu giáo viên tạo, attempts, progress và sao. | Bổ sung bộ mới/bảng trạng thái; mọi bản ghi cũ giữ nguyên. |
+| MIG-03 | Nạp 2–3 lần, mở lại DB; bộ V1 thiếu một phần nhưng dữ liệu còn lại khớp. | Không duplicate/đổi bản ghi đúng; chỉ bổ sung phần thiếu, đủ 12 câu. |
+| MIG-04 | ID trùng khác prompt, đáp án, type, options, điểm, category, thứ tự hoặc bộ/bài học; metadata sai, câu thừa/trộn type. | Báo xung đột và rollback, kể cả chưa có lịch sử. Phép tính khác nhưng cùng đáp án vẫn bị phát hiện. |
+| MIG-05 | JSON hỏng, thiếu/thừa câu, sai cơ cấu 6 nhân/6 chia, thiếu trường, ID trùng, version sai; phép toán ngoài nhân/chia, `a < 10` (`6 × 4`), `b = 0` (cả nhân và chia), `b >= 10` (`39 × 12`, `192 ÷ 12`), đảo toán hạng (`6 × 39`, `6 ÷ 192`), chia có dư (`193 ÷ 6`), toán hạng không nguyên/âm hoặc toán hạng/kết quả vượt giới hạn. | Báo lỗi rõ ràng; không ghi dữ liệu tính năng dở dang. Phép chia hết như `192 ÷ 6` phải được chấp nhận trong fixture đúng cơ cấu. |
+| MIG-06 | Câu đã có lượt đang làm/đã nộp; fixture đổi phép tính nhưng giữ ID/version. | Từ chối; câu, snapshot, kết quả, tiến độ/sao giữ nguyên; yêu cầu ID/version mới hoặc migration riêng. |
+| MIG-07 | Lỗi sau một số insert; thiếu bài học hoặc schema trạng thái không tương thích. | Báo lỗi, rollback toàn bộ thay đổi của bộ nạp; không nuốt lỗi schema. |
+| MIG-08 | Sửa/xóa/thêm câu trong DB sau khởi động; đọc đề/tạo lượt mới. | Phát hiện lệch fixture, từ chối không lộ đáp án; lượt đã tạo giữ snapshot/kết quả cũ. |
+
+So sánh nội dung bản ghi trước/sau, không chỉ đếm dòng. Test bộ nạp độc lập với các cập nhật tài khoản mẫu vốn có ở startup; transaction mới không hoàn tác seed starter đã hoàn tất. Không tạo bảng `estimation_questions`.
+
+MIG-08 kiểm chứng cam kết kỹ thuật bổ sung được nhóm giữ trong V1 tại DECISIONS ADR-05; không diễn giải đây là yêu cầu nguyên văn riêng của đề. Chưa chạy hoặc không đạt ca này thì chưa hoàn thành cam kết thiết kế V1 của nhóm.
+
+## 5. Bằng chứng nghiệm thu
+
+- Clean checkout: `npm ci`, `npm test` thành công trên DB tạm; CI chạy hai lệnh này trên PR.
+- Ghi **Đạt / Không đạt / Chưa chạy** cho TP-01…TP-13 và MIG-01…MIG-08 vào `TEST_REPORT.md`, kèm log/ảnh/liên kết CI.
+- Kiểm tra đủ B-01…B-12, dữ liệu synthetic và không có PII/secret. Chỉ kết luận hoàn thành khi có kết quả chạy thực tế.
