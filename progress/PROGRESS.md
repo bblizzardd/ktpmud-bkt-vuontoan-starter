@@ -100,6 +100,6 @@
 - 
 
 ## Kết quả cuối — Freeze 19/11/2026
-- Tag: bkt-2026-<01>-rc1 · SHA: e20cd0c408de17d3a7d199dc483470d8153e34a0
+- Tag: bkt-2026-<01>-rc1 · SHA:
 - Trạng thái cuối từng mã AC: (cập nhật bảng 2.2 hoặc ghi "như 2.2 trừ: …")
 - Những việc trong timeline chưa hoàn thành và lý do:
