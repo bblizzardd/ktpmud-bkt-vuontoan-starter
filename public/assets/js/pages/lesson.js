@@ -5,6 +5,10 @@
   const params = new URLSearchParams(location.search);
   const lessonId = params.get('lesson');
   const setId = params.get('set');
+  if (setId === window.EstimationPlayer?.setId) {
+    document.addEventListener('mathapp:user-ready', window.EstimationPlayer.mount, { once: true });
+    return;
+  }
   const startedAt = Date.now();
   const answers = {};
   let questions = [];

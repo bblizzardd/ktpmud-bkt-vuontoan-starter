@@ -1,6 +1,6 @@
 # Kế hoạch kiểm thử — Ước lượng trước khi tính đúng
 
-**Trạng thái:** Chưa triển khai/chạy bộ test tính năng.
+**Trạng thái:** Đã triển khai bộ unit/API/migration và kiểm tra trình duyệt. Kết quả từng mục, lệnh chạy và giới hạn kiểm chứng được ghi tại [TEST_REPORT.md](TEST_REPORT.md).
 
 ## 1. Môi trường
 

@@ -170,4 +170,6 @@ try {
   db.prepare("UPDATE users SET full_name = 'Học sinh Lớp 3A2', class_name = '3A2' WHERE username = 'hocsinh01' AND (full_name = 'Bảo Nam' OR full_name = 'Nguyễn Bảo Nam')").run();
 } catch (e) {}
 
+require('./estimation-data').initializeEstimation(db);
+
 module.exports = db;

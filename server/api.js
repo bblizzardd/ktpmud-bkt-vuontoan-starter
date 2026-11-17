@@ -10,6 +10,8 @@ const db = require('./db');
 const { setAuthCookie, clearAuthCookie, requireAuth, requireTeacher } = require('./auth');
 
 const router = express.Router();
+// Type estimate has its own two-step contract; all existing routes remain below.
+router.use(require('./estimation-api')(db));
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 if (!GOOGLE_CLIENT_ID) {
   console.warn('[Google Auth] GOOGLE_CLIENT_ID chưa được cấu hình; đăng nhập Google sẽ bị từ chối.');

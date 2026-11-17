@@ -2,7 +2,7 @@
 
 **Dự án:** Vườn Toán Lớp 3 — Track B.
 
-**Trạng thái:** Đặc tả mục tiêu, chưa triển khai.
+**Trạng thái:** Đặc tả mục tiêu của V1 đã triển khai. Kết quả kiểm chứng và phần chờ nghiệm thu được ghi riêng tại [TEST_REPORT.md](TEST_REPORT.md).
 
 Thiết kế liên quan: [DECISIONS.md](DECISIONS.md). Kế hoạch kiểm chứng: [TEST_PLAN.md](TEST_PLAN.md).
 
@@ -112,9 +112,9 @@ Kiểm tra sai lệch lúc chạy (MIG-08) là cam kết kỹ thuật bổ sung 
 | B-11 | Mục 5.2: chỉ dữ liệu synthetic/alias; không thêm PII, secret hoặc DB cá nhân. |
 | B-12 | Mục 5.2: kiểm tra bàn phím và lỗi; TP-05, TP-13. |
 
-## 7. Bộ câu hỏi V1 dự kiến
+## 7. Bộ câu hỏi V1
 
-Cấu hình sẽ lưu trong `data/estimation-fixtures.json`; đáp án dưới đây là giá trị tham chiếu để review/test. Runtime tính đáp án từ phép toán.
+Cấu hình lưu trong `data/estimation-fixtures.json`; đáp án dưới đây là giá trị tham chiếu để review/test. Runtime tính đáp án từ phép toán.
 
 Cả 12 câu đều có toán hạng thứ nhất nhiều chữ số và toán hạng thứ hai một chữ số. Chọn các số thuận tiện để luyện ước lượng, ví dụ `39 × 6 ≈ 40 × 6 = 240` và `192 ÷ 6 ≈ 180 ÷ 6 = 30`. Đây là điều chỉnh bộ dự kiến trước khi triển khai; quy tắc đổi ID/version cho nội dung đã phát hành vẫn giữ nguyên.
 
@@ -139,4 +139,4 @@ Thực hiện TEST_PLAN trên DB tạm và ghi bằng chứng vào `TEST_REPORT.
 
 Sau khi bộ test được triển khai, checkout sạch chỉ cần `npm ci` rồi `npm test` để tự tạo các DB kiểm thử. DB cũ được dựng từ schema/dữ liệu synthetic lưu trong repo, chưa chạy bộ nạp mới; không lấy DB đang dùng của nhóm. Bằng chứng gồm nội dung bản ghi trước/sau, kết quả chạy lặp/rollback và mở lại cùng file DB. Các cập nhật tài khoản mẫu vốn có của starter được tách khỏi tác động của bộ nạp khi kiểm tra bảo toàn dữ liệu.
 
-Các mục trên là tiêu chí nghiệm thu. Hiện chưa có code migration, test tính năng hoặc kết quả chạy để kết luận góp ý #4 đã hoàn thành.
+Các mục trên là tiêu chí nghiệm thu. Code migration và test tính năng đã được bổ sung; đối chiếu bằng chứng thực tế trong TEST_REPORT trước khi nhóm chốt nghiệm thu. Việc có workflow CI không thay thế kết quả CI chạy trên PR.

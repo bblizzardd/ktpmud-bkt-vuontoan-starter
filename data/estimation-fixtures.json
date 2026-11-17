@@ -1,0 +1,26 @@
+{
+  "version": "phieu-uoc-luong-v1",
+  "rubricVersion": "relative-error-v1",
+  "set": {
+    "id": "phieu-uoc-luong-v1",
+    "title": "Ước lượng trước khi tính đúng",
+    "lessonId": "bai-10",
+    "kind": "exercise",
+    "starReward": 40,
+    "durationMinutes": 0
+  },
+  "questions": [
+    { "id": "est-mul-01", "a": 39, "b": 6, "operator": "*" },
+    { "id": "est-mul-02", "a": 47, "b": 8, "operator": "*" },
+    { "id": "est-mul-03", "a": 58, "b": 4, "operator": "*" },
+    { "id": "est-mul-04", "a": 64, "b": 3, "operator": "*" },
+    { "id": "est-mul-05", "a": 76, "b": 5, "operator": "*" },
+    { "id": "est-mul-06", "a": 85, "b": 7, "operator": "*" },
+    { "id": "est-div-01", "a": 192, "b": 6, "operator": "/" },
+    { "id": "est-div-02", "a": 248, "b": 4, "operator": "/" },
+    { "id": "est-div-03", "a": 315, "b": 5, "operator": "/" },
+    { "id": "est-div-04", "a": 432, "b": 8, "operator": "/" },
+    { "id": "est-div-05", "a": 567, "b": 7, "operator": "/" },
+    { "id": "est-div-06", "a": 864, "b": 9, "operator": "/" }
+  ]
+}

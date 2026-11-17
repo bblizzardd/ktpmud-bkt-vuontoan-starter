@@ -1,8 +1,13 @@
 # Khai báo sử dụng AI
 
 **Dự án:** Vườn Toán Lớp 3 — Track B, Nhóm 01.  
-**Cập nhật:** 11/11/2026.  
-**Giai đoạn:** Phân tích yêu cầu, thiết kế và lập kế hoạch kiểm thử; chưa triển khai tính năng.
+**Cập nhật:** 17/11/2026.
+
+**Giai đoạn:** Thiết kế, triển khai và kiểm thử; nhật ký từng giai đoạn bên dưới.
+
+## Giai đoạn thiết kế — 11/11/2026
+
+Tại thời điểm ghi bảng này, tính năng chưa được triển khai.
 
 | Trường | Nội dung |
 |---|---|
@@ -14,3 +19,16 @@
 | Người chịu trách nhiệm | BE, FE, BA |
 
 Nguồn tham khảo đã đối chiếu: [trang tạp chí của Waring & Penner-Wilger (2017)](https://jnc.psychopen.eu/index.php/jnc/article/view/5705), DOI `10.5964/jnc.v2i3.9`, và [toàn văn PDF](https://d-nb.info/1229755349/34). Bài dùng thang 3–2–1–0 theo các mốc 10%–20%–30%; thang quy đổi, dấu tại biên và trọng số 50/50 là lựa chọn của nhóm.
+
+## Lượt triển khai và kiểm thử — 17/11/2026
+
+Bảng phía trên giữ lại lịch sử giai đoạn thiết kế. Lượt này được người dùng giao triển khai; sau đó xác nhận cho phép thêm điểm nối vào file hiện có, giữ nguyên logic cũ.
+
+| Trường | Nội dung |
+|---|---|
+| Công cụ/model | OpenAI Codex; không xác nhận phiên bản model cụ thể của lượt này. Dùng Node.js, `node:test`, SQLite và Playwright để kiểm chứng. Kết nối computer-use trực tiếp không hoạt động; kiểm tra trình duyệt được thực hiện bằng Playwright. |
+| Mục đích | Hiện thực fixture, bộ nạp, trạng thái hai bước, chấm/lưu, giao diện tích hợp; viết và chạy test biên, dữ liệu lỗi, quyền sở hữu, giao dịch, nâng cấp, hồi quy và bàn phím; review diff để bảo toàn source cũ. |
+| Phạm vi | `data/estimation-fixtures.json`, `server/estimation-*.js`, player/entry/CSS mới, `tests/`, workflow CI; thêm điểm nối vào `server/db.js`, `server/api.js`, `lesson.js`, `lesson.html`, `exercise.html`; thêm script và devDependency test. Cập nhật trạng thái tài liệu, hướng dẫn README và TEST_REPORT. Chưa commit/push/tạo PR. |
+| Kiểm chứng | `npm ci` và `npm test` trên bản sao sạch của working tree, 16 nhóm test backend đạt; `npm run test:ui` trên Chromium kiểm tra luồng 12 câu, lỗi mạng, mất response, xem lại/sửa, refresh và bài cũ. Đối chiếu source trước/sau sau khi bỏ các điểm nối mới; runtime dependency và phần cũ được giữ nguyên. Chi tiết và phần chưa chạy tại [TEST_REPORT.md](TEST_REPORT.md). |
+| Quyết định của nhóm | Triển khai theo rubric, luồng và kiến trúc đã chốt. Người dùng cho phép thêm điểm nối, không thay logic cũ. AI bổ sung kiểm tra snapshot để chặn thay nội dung cùng version khi DB thiếu dòng; thêm Playwright để tái lập kiểm tra giao diện. Không sửa lỗi Tailwind offline có sẵn ngoài phạm vi. Kết quả code vẫn chờ BE/FE/BA review, không coi test tự động là phê duyệt của thành viên. |
+| Người chịu trách nhiệm | BE, FE, BA theo phân công đã ghi. Chưa ghi nhận review/chấp thuận cuối cho phần triển khai trong lượt này; nhóm bổ sung mã người review, commit và bằng chứng CI khi thực hiện. |

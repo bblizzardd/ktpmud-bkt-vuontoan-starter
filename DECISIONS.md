@@ -2,7 +2,7 @@
 
 **Dự án:** Vườn Toán Lớp 3 — Track B, Nhóm 01.
 
-**Trạng thái:** Thiết kế dự kiến, chưa triển khai.
+**Trạng thái:** Đã có triển khai V1 theo các quyết định dưới đây. Kết quả kiểm chứng và phần chờ review tại [TEST_REPORT.md](TEST_REPORT.md).
 
 Đối chiếu với [đặc tả starter](docs/architecture-reference.md), `server/db.js`, `server/index.js` và các API câu hỏi/nộp bài. Yêu cầu nghiệm thu nằm trong [REQUIREMENTS.md](REQUIREMENTS.md); ca kiểm thử nằm trong [TEST_PLAN.md](TEST_PLAN.md).
 
@@ -59,7 +59,7 @@ Chọn phương án A: **ước lượng → khóa → tính chính xác → lư
 
 Thêm một bảng `estimation_runs`; `attempts` tiếp tục lưu kết quả tổng hợp. Không thêm bảng riêng cho câu trả lời nháp.
 
-| Trường dự kiến | Vai trò |
+| Trường | Vai trò |
 |---|---|
 | `id`, `user_id`, `set_id` | Lượt làm, chủ sở hữu, bộ đề |
 | `status` | `in_progress` hoặc `submitted` |
@@ -70,7 +70,7 @@ Thêm một bảng `estimation_runs`; `attempts` tiếp tục lưu kết quả t
 | `attempt_id` | Khóa ngoại duy nhất tới kết quả trong `attempts` |
 | `created_at`, `updated_at` | Thời điểm tạo/cập nhật |
 
-| API dự kiến | Hợp đồng |
+| API | Hợp đồng |
 |---|---|
 | `POST /api/estimation-runs` | Nhận `setId`; tạo lượt/snapshot, trả `runId` và đề công khai. |
 | `POST /api/estimation-runs/:runId/estimates/:questionId` | Nhận `{ estimate }`; validate, lưu và khóa ước lượng của câu được phép làm; không trả điểm/sai số. |
@@ -140,7 +140,7 @@ Tra từng ID câu trên toàn bảng `questions` vì ID là khóa chính toàn 
 
 Tách hai thao tác: bộ nạp được phép thêm phần thiếu lúc khởi động; hàm đối chiếu trong API chỉ đọc và yêu cầu bộ đầy đủ. API không tự nạp lại, sửa hoặc xóa câu khi phát hiện lệch. Kiểm tra trước khi trả đề cho bộ V1 và trong cùng transaction tạo snapshot/lượt mới. Response lỗi không chứa đáp án chuẩn. Các bước tiếp theo của lượt đã tạo dùng snapshot và phiên bản đã lưu, không lấy đề hoặc rubric mới để ghi đè lịch sử.
 
-### Các file dự kiến khi triển khai
+### Các file triển khai
 
 | File | Trách nhiệm |
 |---|---|
@@ -153,7 +153,7 @@ Tách hai thao tác: bộ nạp được phép thêm phần thiếu lúc khởi 
 | `tests/fixtures/legacy-v1.sql` — mới | Schema cũ cùng dữ liệu synthetic để tái tạo ca nâng cấp. |
 | `package.json`, `README.md` | Bổ sung lệnh test và hướng dẫn khởi tạo/nâng cấp, xử lý xung đột. |
 
-Các đường dẫn mới là kế hoạch triển khai, chưa phải file đã có. Không cần sửa `data/seed.json`, `server/auth.js`, route giáo viên hoặc cấu hình deployment để thực hiện bộ nạp.
+Các file trong bảng đã được bổ sung. Bộ nạp cũng đối chiếu fixture với snapshot đã phát hành, để việc thiếu một dòng trong SQLite không cho phép dùng lại ID/version cũ cho nội dung khác. Không sửa `data/seed.json`, `server/auth.js`, route giáo viên hoặc cấu hình deployment để thực hiện bộ nạp.
 
 ## ADR-06. Kiểm thử và phạm vi
 
@@ -165,4 +165,6 @@ Sau khi triển khai, `npm ci` rồi `npm test` từ checkout sạch phải tự
 
 Giữ Express/SQLite/JavaScript hiện tại. Không sửa auth/session, tài khoản mẫu, route auth/teacher/admin hoặc deployment. Ngoài MVP: UI biên tập câu mới, nhiều bộ mới, dashboard nâng cao. Nghiệm thu vẫn cần đủ B-01…B-12.
 
-**Sử dụng AI:** Codex hỗ trợ đối chiếu source và biên tập tài liệu; chưa triển khai hoặc chạy test tính năng. Hồ sơ `AI_USE.md` cần phản ánh công việc hỗ trợ thực tế.
+Kiểm thử trình duyệt dùng Playwright qua lệnh `npm run test:ui`, tách khỏi bộ unit/API/migration `npm test`. Playwright chỉ là devDependency; stack và dependency runtime giữ nguyên. Các điểm nối vào file starter đã được người dùng cho phép với điều kiện giữ nguyên logic cũ.
+
+**Sử dụng AI:** Codex hỗ trợ đối chiếu source, biên tập tài liệu, triển khai và chạy kiểm thử. Chi tiết công việc và trách nhiệm review nằm tại [AI_USE.md](AI_USE.md); kết quả chạy nằm tại [TEST_REPORT.md](TEST_REPORT.md).
