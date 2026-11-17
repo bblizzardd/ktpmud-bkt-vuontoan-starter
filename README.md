@@ -14,11 +14,13 @@ Web học Toán lớp 3 gồm giao diện học sinh (bài học, luyện tập,
 và khu vực giáo viên (theo dõi lớp, cấp tài khoản). Đợt 1 đã nối **backend thật**:
 đăng nhập/đăng xuất, chấm điểm trên server, lưu điểm & tiến độ vào cơ sở dữ liệu SQLite.
 
-## Ý tưởng mở rộng Track B (chưa triển khai)
+## Phần mở rộng Track B
 
 Thêm dạng bài **“Ước lượng trước khi tính đúng”** vào luồng luyện tập, gồm 12 câu: 6 câu nhân và 6 câu chia hết, với số nhiều chữ số nhân hoặc chia cho số một chữ số. Mỗi câu: nhập và khóa ước lượng → tính chính xác → bấm **Câu tiếp theo** để lưu trên server, giúp tải lại không mất các câu đã lưu. Cuối bộ, học sinh xem lại và nộp bài để nhận điểm, phản hồi riêng cho ước lượng và kết quả tính.
 
 Chi tiết: [Yêu cầu](REQUIREMENTS.md), [Thiết kế](DECISIONS.md), [Kế hoạch kiểm thử](TEST_PLAN.md).
+
+V1 đã có code và test; hướng dẫn chạy tại Mục 8, bằng chứng và giới hạn kiểm chứng tại [TEST_REPORT.md](TEST_REPORT.md).
 
 ## 1. Cách chạy
 
@@ -119,3 +121,36 @@ vuon-toan-lop-3/
 - Nhúng font/icon tại chỗ để offline 100% cả chữ và biểu tượng.
 - Thực hiện deploy thật (cần tài khoản hosting/tên miền của trường).
 - Thêm biểu đồ theo tuần/tháng và xuất phiếu bồi dưỡng PDF theo dạng bài hay sai.
+
+## 8. Track B — Ước lượng trước khi tính đúng
+
+Tính năng V1 có một bộ 12 câu: 6 phép nhân, 6 phép chia hết. Trong **Luyện Tập & Kiểm Tra**, chọn **Vào bài ước lượng**. Bộ gắn với `bai-10`, giữ điều kiện hoàn thành bài trước của starter. Phiếu cũ vẫn nằm trên cùng trang Luyện tập.
+
+Mỗi câu gồm: nhập ước lượng → xác nhận khóa → nhập kết quả tính chính xác → lưu để sang câu tiếp theo. Sau câu 12, xem lại và sửa phần tính chính xác nếu cần, rồi nộp cả bộ. Chỉ lần nộp hợp lệ mới trả điểm, đáp án và cập nhật sao. Refresh khôi phục phần đã lưu; phần đang gõ chưa lưu có thể mất. **Làm lượt mới** tạo lượt khác, không xóa lượt cũ.
+
+Điểm ước lượng là 10/7/3/0 với các biên trên 10%/20%/30% được tính vào mức tương ứng. Ước lượng và tính chính xác mỗi phần chiếm 50%. Xem [REQUIREMENTS.md](REQUIREMENTS.md) và [DECISIONS.md](DECISIONS.md) để đối chiếu quy tắc.
+
+### Chạy và kiểm thử
+
+Môi trường đã kiểm chứng: Node.js 22.14.0. Cài dependency theo lockfile:
+
+```sh
+npm ci
+npm test
+npx playwright install chromium
+npm run test:ui
+npm start
+```
+
+`npm test` chạy unit/API/migration bằng `node:test`. `npm run test:ui` dùng Chromium/Playwright để kiểm tra bàn phím, lưu/khôi phục, mất kết nối và hồi quy giao diện. Hai lệnh test tự tạo SQLite tạm, không dùng DB của nhóm. Có thể đặt `UI_ARTIFACT_DIR` để lưu ảnh kiểm tra giao diện. CI trên PR chạy cả hai bộ; xem [.github/workflows/test.yml](.github/workflows/test.yml).
+
+### Nạp dữ liệu trên DB mới và DB cũ
+
+- Nguồn câu hỏi duy nhất: [data/estimation-fixtures.json](data/estimation-fixtures.json). Không thêm lại 12 câu vào `seed.json`.
+- Khi khởi động, `server/db.js` gọi bộ nạp mới sau seed starter. Bộ nạp tạo `estimation_runs`, thêm bộ/câu còn thiếu và kiểm tra các dòng hiện hữu trong một transaction. Tài khoản, lịch sử và câu cũ được giữ nguyên.
+- Chạy lại không tạo trùng. SQLite khác fixture, snapshot đã phát hành khác fixture, thiếu bài học hoặc schema không phù hợp sẽ làm khởi động dừng với thông báo lỗi. Kiểm tra ID/trường được báo, đối chiếu dữ liệu và bản sao lưu hợp lệ; không reset DB hoặc tự ghi đè để bỏ qua lỗi. Đổi nội dung đã phát hành cần ID/version mới và migration được review.
+- API đọc đề/tạo lượt mới cũng phát hiện dữ liệu bị sửa sau khởi động. Lượt đang làm tiếp tục dùng snapshot đã lưu. Khi gặp lỗi này, học sinh báo giáo viên kiểm tra dữ liệu.
+
+Phần mới nằm trong `server/estimation-*.js`, player/entry và CSS `estimation.*` phía giao diện. Các file starter chỉ thêm điểm nối; auth, route quản trị, seed cũ, deployment và nhánh chấm bốn type cũ giữ nguyên. Kết quả thực tế và giới hạn kiểm thử nằm trong [TEST_REPORT.md](TEST_REPORT.md).
+#   v u o n t o a n  
+ 
